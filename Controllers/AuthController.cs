@@ -1,4 +1,5 @@
 ﻿using JwtWebApi.Dto;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
@@ -27,10 +28,16 @@ namespace JwtWebApi.Controllers
 		[HttpPost("login")]
 		public async Task<ActionResult<string>> Login(UserDto request)
 		{
-			if(user.Username == request.Username)
+			if(user.Username != request.Username)
 			{
 				return BadRequest("User not found.");
 			}
+
+			if(!VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
+			{
+				return BadRequest("Wrong password !");
+			}
+
 			return Ok("My Token!");
 		}
 
@@ -44,6 +51,17 @@ namespace JwtWebApi.Controllers
 				passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
 			}
 		}
+
+		private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+		{
+			using(var hmac = new HMACSHA512(passwordSalt))
+			{
+				var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));	
+				//computedHash value will compare this byte by byte with the password hash and will return true or false
+				return computedHash.SequenceEqual(passwordHash);
+			}
+
+		} 
 
 
 	}
